@@ -76,7 +76,7 @@ crit_leave_all(void)
  */
 #define IPENDING_ISSET(ci, slot) (ci->ci_ipending & (1ull << slot))
 #define IPENDING_CLR(ci, slot) (ci->ci_ipending &= ~(1ull << slot))
-#define IPENDING_NEXT(ci) (flsq(ci->ci_ipending) - 1)
+#define IPENDING_NEXT(ci) (__builtin_clz(ci->ci_ipending) - 1)
 void
 crit_rundeferred(void)
 {
