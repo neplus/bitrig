@@ -31,8 +31,8 @@ void
 __mp_lock_init(struct __mp_lock *mpl)
 {
 	bzero(mpl->mpl_cpus, sizeof(mpl->mpl_cpus));
-	mpl->mpl_users = 0;
-	mpl->mpl_ticket = 0;
+	atomic_init(&mpl->mpl_users, 0);
+	atomic_init(&mpl->mpl_ticket, 0);
 }
 
 #if defined(MP_LOCKDEBUG)
@@ -48,30 +48,21 @@ static __inline void
 __mp_lock_spin(struct __mp_lock *mpl, u_int me)
 {
 #ifndef MP_LOCKDEBUG
-	while (mpl->mpl_ticket != me)
-		SPINLOCK_SPIN_HOOK;
+	while (atomic_load_explicit(&mpl->mpl_ticket,
+	    memory_order_acquire) != me)
+		SPINWAIT();
 #else
 	int ticks = __mp_lock_spinout;
 
-	while (mpl->mpl_ticket != me && --ticks > 0)
-		SPINLOCK_SPIN_HOOK;
+	while (atomic_load_explicit(&mpl->mpl_ticket,
+	    memory_order_acquire) != me && --ticks > 0)
+		SPINWAIT();
 
 	if (ticks == 0) {
 		db_printf("__mp_lock(%p): lock spun out\n", mpl);
 		Debugger();
 	}
 #endif
-}
-
-static inline u_int
-fetch_and_add(u_int *var, u_int value)
-{
-	__asm __volatile("lock; xaddl %%eax, %2;"
-	    : "=a" (value)
-	    : "a" (value), "m" (*var)
-	    : "memory");
-
-        return (value);
 }
 
 void
@@ -82,7 +73,8 @@ __mp_lock(struct __mp_lock *mpl)
 
 	disable_intr();
 	if (cpu->mplc_depth++ == 0)
-		cpu->mplc_ticket = fetch_and_add(&mpl->mpl_users, 1);
+		cpu->mplc_ticket = atomic_fetch_add_explicit(&mpl->mpl_users,
+		    1, memory_order_acquire);
 	write_rflags(rf);
 
 	__mp_lock_spin(mpl, cpu->mplc_ticket);
@@ -101,9 +93,12 @@ __mp_unlock(struct __mp_lock *mpl)
 	}
 #endif
 
-	disable_intr();	
-	if (--cpu->mplc_depth == 0)
-		mpl->mpl_ticket++;
+	disable_intr();
+	if (--cpu->mplc_depth == 0) {
+		atomic_fetch_add_explicit(&mpl->mpl_ticket, 1,
+		    memory_order_release);
+		SPINWAKE();
+	}
 	write_rflags(rf);
 }
 
@@ -116,7 +111,8 @@ __mp_release_all(struct __mp_lock *mpl)
 
 	disable_intr();
 	cpu->mplc_depth = 0;
-	mpl->mpl_ticket++;
+	atomic_fetch_add_explicit(&mpl->mpl_ticket, 1, memory_order_release);
+	SPINWAKE();
 	write_rflags(rf);
 
 	return (rv);

@@ -34,8 +34,8 @@ struct __mp_lock_cpu {
 
 struct __mp_lock {
 	struct __mp_lock_cpu	mpl_cpus[MAXCPUS];
-	u_int			mpl_ticket;
-	u_int			mpl_users;
+	atomic_int		mpl_ticket;
+	atomic_int		mpl_users;
 };
 
 #ifndef _LOCORE
