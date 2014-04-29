@@ -29,7 +29,6 @@ SRCS+=		abort_message.cpp\
 		UnwindLevel1.c\
 		UnwindRegistersRestore.S\
 		UnwindRegistersSave.S\
-		Unwind_AppleExtras.cpp\
 		libunwind.cpp
 
 WARNS=		0
