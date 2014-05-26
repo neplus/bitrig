@@ -137,6 +137,23 @@ _dl_run_all_dtors(void)
 				fini_complete = 0;
 				node->status |= STAT_FINI_DONE;
 				node->status &= ~STAT_FINI_READY;
+				/* Run FINI_ARRAY before fini */
+				if (node->fini_array != NULL) {
+					void (*fini_func)(void) ;
+					int i;
+					DL_DEB(("doing fini_array "
+					    "obj %p @%p: [%s]\n",
+					    node, node->fini_array,
+					    node->load_name));
+					for (i = node->fini_array_num;
+					    i >= 0;
+					    i--) {
+						fini_func =
+						    (void (*)(void))
+						    *node->fini_array[i];
+						fini_func();
+					}
+				}
 				(*node->dyn.fini)();
 			}
 		}
@@ -706,6 +723,47 @@ _dl_rtld(elf_object_t *object)
 }
 
 void
+_dl_call_preinit(elf_object_t *object)
+{
+	struct dep_node *n;
+
+	object->status |= STAT_PREINIT_VISITED;
+
+	TAILQ_FOREACH(n, &object->child_list, next_sib) {
+		if (n->data->status & STAT_VISITED)
+			continue;
+		_dl_call_preinit(n->data);
+	}
+
+	object->status &= ~STAT_PREINIT_VISITED;
+
+	if (object->status & STAT_PREINIT_ARRAY_DONE)
+		return;
+
+	if (object->dyn.init) {
+		DL_DEB(("doing ctors obj %p @%p: [%s]\n",
+		    object, object->dyn.init, object->load_name));
+		(*object->dyn.init)();
+	}
+	/* Run INIT_ARRAY after init */
+	if (object->init_array != NULL) {
+		Elf_Addr **p;
+		void (*init_func)(void) ;
+
+		int i;
+		DL_DEB(("doing init_array obj %p @%p: [%s]\n",
+		    object, object->init_array, object->load_name));
+		for (p = object->init_array, i = 0;
+			i < object->init_array_num;
+			i++, p++) {
+				init_func = (void (*)(void))*p;
+				init_func();
+		}
+	}
+
+	object->status |= STAT_PREINIT_ARRAY_DONE;
+}
+void
 _dl_call_init(elf_object_t *object)
 {
 	_dl_call_init_recurse(object, 1);
@@ -737,6 +795,32 @@ _dl_call_init_recurse(elf_object_t *object, int initfirst)
 		DL_DEB(("doing ctors obj %p @%p: [%s]\n",
 		    object, object->dyn.init, object->load_name));
 		(*object->dyn.init)();
+	}
+	if (object->init_array != NULL) {
+		Elf_Addr **p;
+		void (*init_func)(void) ;
+
+		/*
+		 * XXX - this test to see if the init array has a final element
+		 * of NULL should be removed. An early implmentation of 
+		 * init_array was implemented in crt(begin|end).o
+		 * Once that old ABI is eradicated, this test can be removed.
+		 */
+		if (object->init_array[object->init_array_num-1] == 0) {
+			DL_DEB(("NOT doing init_array: NULL term list obj %p @%p: [%s]\n",
+			    object, object->init_array, object->load_name));
+			
+		} else {
+			int i;
+			DL_DEB(("doing init_array obj %p @%p: [%s]\n",
+			    object, object->init_array, object->load_name));
+			for (p = object->init_array, i = 0;
+				i < object->init_array_num;
+				i++, p++) {
+					init_func = (void (*)(void))*p;
+					init_func();
+			}
+		}
 	}
 
 	object->status |= STAT_INIT_DONE;
