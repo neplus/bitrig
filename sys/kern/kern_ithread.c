@@ -21,6 +21,7 @@
 #include <sys/kthread.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
+#include <sys/softintr.h>
 
 #include <uvm/uvm_extern.h>
 

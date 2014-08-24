@@ -26,6 +26,8 @@
  * Generic software interrupt support for all platforms.
  */
 
+extern struct pic softintr_pic;
+
 #define SOFTINTR_ESTABLISH_MPSAFE	0x01
 #define softintr_establish(i, f, a)					\
 	softintr_establish_flags(i, f, a, 0)
