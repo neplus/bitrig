@@ -1,4 +1,4 @@
-/*	$OpenBSD: mount.h,v 1.120 2014/06/04 07:58:14 claudio Exp $	*/
+/*	$OpenBSD: mount.h,v 1.121 2014/09/08 01:47:06 guenther Exp $	*/
 /*	$NetBSD: mount.h,v 1.48 1996/02/18 11:55:47 fvdl Exp $	*/
 
 /*
@@ -282,6 +282,10 @@ struct statfs {
 #define	MOUNT_FFS	"ffs"		/* UNIX "Fast" Filesystem */
 #define	MOUNT_NFS	"nfs"		/* Network Filesystem */
 #define	MOUNT_MSDOS	"msdos"		/* MSDOS Filesystem */
+<<<<<<< HEAD
+=======
+#define	MOUNT_AFS	"afs"		/* Andrew Filesystem */
+>>>>>>> Delete procfs; it's always had races and is now unused: no one noticed for
 #define	MOUNT_CD9660	"cd9660"	/* ISO9660 (aka CDROM) Filesystem */
 #define	MOUNT_EXT2FS	"ext2fs"	/* Second Extended Filesystem */
 #define	MOUNT_UDF	"udf"		/* UDF */
