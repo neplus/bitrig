@@ -2331,8 +2331,7 @@ sr_scsi_wu_put(struct sr_discipline *sd, struct sr_workunit *wu)
 {
 	scsi_io_put(&sd->sd_iopool, wu);
 
-	if (sd->sd_sync)
-		wakeup(sd);
+	wakeup(sd);
 }
 
 void
@@ -2345,8 +2344,7 @@ sr_scsi_done(struct sr_discipline *sd, struct scsi_xfer *xs)
 
 	scsi_done(xs);
 
-	if (sd->sd_sync)
-		wakeup(sd);
+	wakeup(sd);
 }
 
 void
@@ -3884,6 +3882,7 @@ sr_discipline_shutdown(struct sr_discipline *sd, int meta_save)
 
 	/* make sure there isn't a sync pending and yield */
 	wakeup(sd);
+	/* revisit this */
 	while (sd->sd_sync || sd->sd_must_flush)
 		if (tsleep(&sd->sd_sync, MAXPRI, "sr_down", 60 * hz) ==
 		    EWOULDBLOCK)
@@ -4112,17 +4111,46 @@ int
 sr_raid_sync(struct sr_workunit *wu)
 {
 	struct sr_discipline	*sd = wu->swu_dis;
-	int			s, rv = 0, ios;
+	int			ios = 0, rv = 0, retries = 15;
 
-	DNPRINTF(SR_D_DIS, "%s: sr_raid_sync\n", DEVNAME(sd->sd_sc));
+	if (!(wu->swu_flags & SR_WUF_FAKE)) {
+		/* When we are not a fake sync we must not acount the sync
+		 * command itself.  The midlayer already did that, so we
+		 * we wait until we drain all but 1 IO meaning, don't wait
+		 * on the completion for the SYNC that will never happen.
+		 */
+		ios = 1;
+	}
 
-	/* when doing a fake sync don't count the wu */
-	ios = (wu->swu_flags & SR_WUF_FAKE) ? 0 : 1;
+	mtx_enter(&sd->sd_wu_mtx);
 
-	s = splbio();
+	DNPRINTF(SR_D_DIS, "%s: sr_raid_sync %d fake %d\n",
+	    DEVNAME(sd->sd_sc),
+	    sd->sd_wu_pending,
+	    wu->swu_flags & SR_WUF_FAKE);
+
+	/* diagnostic */
+	if (sd->sd_sync != 0) {
+		printf("sd->sd_sync != 0, called reentrant\n");
+	}
+
 	sd->sd_sync = 1;
-	while (sd->sd_wu_pending > ios) {
-		if (tsleep(sd, PRIBIO, "sr_sync", 15 * hz) == EWOULDBLOCK) {
+	for (;;) {
+		if (sd->sd_wu_pending <= ios) {
+			break;
+		}
+
+		/* wait a bit for io to drain */
+		if (msleep(sd, &sd->sd_wu_mtx, PWAIT, "sr_sync", 1 * hz) ==
+		    EWOULDBLOCK) {
+			if (retries-- > 0) {
+				continue;
+			}
+
+			/* print timeout for now */
+			printf("%s: sr_raid_sync timeout\n",
+			    DEVNAME(sd->sd_sc));
+
 			DNPRINTF(SR_D_DIS, "%s: sr_raid_sync timeout\n",
 			    DEVNAME(sd->sd_sc));
 			rv = 1;
@@ -4130,7 +4158,7 @@ sr_raid_sync(struct sr_workunit *wu)
 		}
 	}
 	sd->sd_sync = 0;
-	splx(s);
+	mtx_leave(&sd->sd_wu_mtx);
 
 	wakeup(&sd->sd_sync);
 
