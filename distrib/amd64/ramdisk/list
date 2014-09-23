@@ -1,6 +1,6 @@
 SRCDIRS distrib/special
 SRCDIRS bin sbin usr.bin usr.sbin
-LIBS -lstubs -lutil -locurses -lressl -lssl -lcrypto -ledit -lm -lc
+LIBS -lkvm -lstubs -lutil -locurses -lressl -lssl -lcrypto -ledit -lm -lc
 
 # copy the crunched binary, link to it, and kill it
 COPY	${OBJDIR}/instbin			instbin
@@ -61,6 +61,7 @@ LINK	instbin					usr/bin/gzip usr/bin/gunzip usr/bin/gzcat
 LINK	instbin					usr/bin/less usr/bin/more
 LINK	instbin					usr/bin/sed
 LINK	instbin					usr/bin/signify
+LINK	instbin					usr/bin/vmstat
 LINK	instbin					usr/sbin/installboot
 
 # copy the MAKEDEV script and make some devices

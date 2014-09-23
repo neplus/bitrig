@@ -1131,7 +1131,7 @@ mskc_attach(struct device *parent, struct device *self, void *aux)
 	DPRINTFN(2, ("mskc_attach: allocate interrupt\n"));
 
 	/* Allocate interrupt */
-	if (pci_intr_map(pa, &ih)) {
+	if (pci_intr_map_msi(pa, &ih) && pci_intr_map(pa, &ih)) {
 		printf(": couldn't map interrupt\n");
 		goto fail_1;
 	}
