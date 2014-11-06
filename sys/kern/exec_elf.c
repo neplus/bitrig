@@ -1,4 +1,4 @@
-/*	$OpenBSD: exec_elf.c,v 1.103 2014/11/06 17:23:40 millert Exp $	*/
+/*	$OpenBSD: exec_elf.c,v 1.104 2014/11/06 17:31:19 tedu Exp $	*/
 
 /*
  * Copyright (c) 1996 Per Fogelstrom
@@ -1016,7 +1016,6 @@ ELFNAMEEND(coredump)(struct proc *p, void *cookie)
 	psections = mallocarray(cs.npsections, sizeof(Elf_Phdr),
 	    M_TEMP, M_WAITOK|M_ZERO);
 	psectionslen = cs.npsections * sizeof(Elf_Phdr);
-	printf("coredump: malloc %zu bytes at %p\n", psectionslen, psections);
 
 	offset = sizeof(ehdr);
 	notestart = offset + psectionslen;
@@ -1090,7 +1089,6 @@ ELFNAMEEND(coredump)(struct proc *p, void *cookie)
 	}
 
 out:
-	printf("coredump: free %zu bytes at %p\n", psectionslen, psections);
 	free(psections, M_TEMP, psectionslen);
 	return (error);
 #endif
