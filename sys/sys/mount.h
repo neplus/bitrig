@@ -282,10 +282,6 @@ struct statfs {
 #define	MOUNT_FFS	"ffs"		/* UNIX "Fast" Filesystem */
 #define	MOUNT_NFS	"nfs"		/* Network Filesystem */
 #define	MOUNT_MSDOS	"msdos"		/* MSDOS Filesystem */
-<<<<<<< HEAD
-=======
-#define	MOUNT_AFS	"afs"		/* Andrew Filesystem */
->>>>>>> Delete procfs; it's always had races and is now unused: no one noticed for
 #define	MOUNT_CD9660	"cd9660"	/* ISO9660 (aka CDROM) Filesystem */
 #define	MOUNT_EXT2FS	"ext2fs"	/* Second Extended Filesystem */
 #define	MOUNT_UDF	"udf"		/* UDF */
