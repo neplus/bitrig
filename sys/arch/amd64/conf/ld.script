@@ -58,6 +58,7 @@ SECTIONS
 	. = ALIGN(__ALIGN_SIZE);
 	.rodata :
 	{
+		__rodata_start = ABSOLUTE(.);
 		*(.rodata .rodata.*)
 	} :rodata
 	PROVIDE (erodata = .);
@@ -72,6 +73,7 @@ SECTIONS
 
 	.data :
 	{
+		__data_start = ABSOLUTE(.);
 		*(.data .data.*)
 	} :data
 	. = ALIGN(__ALIGN_SIZE);

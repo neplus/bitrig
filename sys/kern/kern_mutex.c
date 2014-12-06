@@ -100,10 +100,10 @@ mtx_enter_try(struct mutex *mtx)
 	KASSERT(mtx->mtx_owner != curcpu());
 
 	/* Figure out which ticket is active. */
-	t = atomic_load_explicit(&mtx->mtx_cur, memory_order_relaxed);
+	t = atomic_load_explicit(&mtx->mtx_cur, memory_order_acquire);
 	/* Take ticket t, if it is available. */
 	if (atomic_compare_exchange_strong_explicit(&mtx->mtx_ticket, &t, t + 1,
-	    memory_order_acquire, memory_order_relaxed)) {
+	    memory_order_release, memory_order_relaxed)) {
 		/* We hold the lock, save old ipl. */
 		mtx_store(mtx, s);
 

@@ -59,10 +59,12 @@
 #ifndef SYS_RWLOCK_H
 #define SYS_RWLOCK_H
 
+#include <sys/stdatomic.h>
+
 struct proc;
 
 struct rwlock {
-	volatile unsigned long rwl_owner;
+	atomic_ulong rwl_owner;
 	const char *rwl_name;
 };
 

@@ -3210,7 +3210,7 @@ void
 ixgbe_handle_msf(struct ix_softc *sc)
 {
 	struct ixgbe_hw *hw = &sc->hw;
-	uint32_t autoneg, err;
+	uint32_t autoneg, err = 0;
 	bool negotiate;
 
 	autoneg = hw->phy.autoneg_advertised;

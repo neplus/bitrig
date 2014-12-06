@@ -81,41 +81,50 @@ static const struct rwlock_op {
 void
 rw_enter_read(struct rwlock *rwl)
 {
-	unsigned long owner = rwl->rwl_owner;
+	unsigned long owner;
 
 	assertwaitok();
 
+	owner = atomic_load_explicit(&rwl->rwl_owner,
+	    memory_order_acquire);
+
+	/* Take rwlock, if it is available. */
 	if (__predict_false((owner & RWLOCK_WRLOCK) ||
-	    rw_cas(&rwl->rwl_owner, owner, owner + RWLOCK_READ_INCR)))
+	    atomic_compare_exchange_strong_explicit(&rwl->rwl_owner,
+	    &owner, owner + RWLOCK_READ_INCR, memory_order_release,
+	    memory_order_relaxed)))
 		rw_enter(rwl, RW_READ);
-	else
-		membar_enter();
 }
 
 void
 rw_enter_write(struct rwlock *rwl)
 {
 	struct proc *p = curproc;
+	unsigned long owner = 0;
 
 	assertwaitok();
 
-	if (__predict_false(rw_cas(&rwl->rwl_owner, 0,
-	    RW_PROC(p) | RWLOCK_WRLOCK)))
+	if (__predict_false(
+	    atomic_compare_exchange_strong_explicit(&rwl->rwl_owner,
+	    &owner, RW_PROC(p) | RWLOCK_WRLOCK, memory_order_release,
+	    memory_order_relaxed)))
 		rw_enter(rwl, RW_WRITE);
-	else
-		membar_enter();
 }
 
 void
 rw_exit_read(struct rwlock *rwl)
 {
-	unsigned long owner = rwl->rwl_owner;
+	unsigned long owner;
 
 	rw_assert_rdlock(rwl);
 
-	membar_exit();
+	owner = atomic_load_explicit(&rwl->rwl_owner,
+	    memory_order_acquire);
+
 	if (__predict_false((owner & RWLOCK_WAIT) ||
-	    rw_cas(&rwl->rwl_owner, owner, owner - RWLOCK_READ_INCR)))
+	    atomic_compare_exchange_strong_explicit(&rwl->rwl_owner,
+	    &owner, owner - RWLOCK_READ_INCR, memory_order_release,
+	    memory_order_relaxed)))
 		rw_exit(rwl);
 }
 
@@ -126,9 +135,9 @@ rw_exit_write(struct rwlock *rwl)
 
 	rw_assert_wrlock(rwl);
 
-	membar_exit();
 	if (__predict_false((owner & RWLOCK_WAIT) ||
-	    rw_cas(&rwl->rwl_owner, owner, 0)))
+	    atomic_compare_exchange_strong_explicit(&rwl->rwl_owner,
+	    &owner, 0, memory_order_release, memory_order_relaxed)))
 		rw_exit(rwl);
 }
 
@@ -217,7 +226,8 @@ retry:
 		if (flags & RW_INTR)
 			sleep_setup_signal(&sls, op->wait_prio | PCATCH);
 
-		do_sleep = !rw_cas(&rwl->rwl_owner, o, set);
+		do_sleep = !atomic_compare_exchange_strong_explicit(&rwl->rwl_owner,
+		    &o, set, memory_order_relaxed, memory_order_relaxed);
 
 		sleep_finish(&sls, do_sleep);
 		if ((flags & RW_INTR) &&
@@ -227,9 +237,9 @@ retry:
 			return (EAGAIN);
 	}
 
-	if (__predict_false(rw_cas(&rwl->rwl_owner, o, o + inc)))
+	if (__predict_false(atomic_compare_exchange_strong_explicit(&rwl->rwl_owner,
+		    &o, o + inc, memory_order_release, memory_order_relaxed)))
 		goto retry;
-	membar_enter();
 
 	/*
 	 * If old lock had RWLOCK_WAIT and RWLOCK_WRLOCK set, it means we
@@ -255,15 +265,16 @@ rw_exit(struct rwlock *rwl)
 	else
 		rw_assert_rdlock(rwl);
 
-	membar_exit();
 	do {
-		owner = rwl->rwl_owner;
+		owner = atomic_load_explicit(&rwl->rwl_owner,
+		    memory_order_acquire);
 		if (wrlock)
 			set = 0;
 		else
 			set = (owner - RWLOCK_READ_INCR) &
 				~(RWLOCK_WAIT|RWLOCK_WRWANT);
-	} while (rw_cas(&rwl->rwl_owner, owner, set));
+	} while (atomic_compare_exchange_strong_explicit(&rwl->rwl_owner,
+	    &owner, set, memory_order_release, memory_order_relaxed));
 
 	if (owner & RWLOCK_WAIT)
 		wakeup(rwl);

@@ -721,7 +721,7 @@ fast_user_write(struct drm_i915_private *dev_priv,
 	agp_map_atomic(dev_priv->agph, page_base, &bsh);
 	vaddr_atomic = bus_space_vaddr(dev_priv->bst, bsh);
 	/* We can use the cpu mem copy function because this is X86. */
-	vaddr = (void __force*)vaddr_atomic + page_offset;
+	vaddr = (void __force*)((char *)vaddr_atomic + page_offset);
 	unwritten = __copy_from_user_inatomic_nocache(vaddr,
 						      user_data, length);
 	agp_unmap_atomic(dev_priv->agph, bsh);

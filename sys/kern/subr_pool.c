@@ -859,7 +859,7 @@ pool_update_curpage(struct pool *pp)
 void
 pool_setlowat(struct pool *pp, int n)
 {
-	int prime;
+	int prime = 0;
 
 	mtx_enter(&pp->pr_mtx);
 	pp->pr_minitems = n;

@@ -1403,7 +1403,7 @@ uvm_pagedeactivate(struct vm_page *pg)
 	 * never occur while we protect deactivated cases on kernels with
 	 * reliable referenced bits..
 	 */
-	pmap_page_protect(pg, VM_PROT_NONE);
+	pmap_page_protect(pg, PROT_NONE);
 
 	if (pg->pg_flags & PQ_ACTIVE) {
 		TAILQ_REMOVE(&uvm.page_active, pg, pageq);

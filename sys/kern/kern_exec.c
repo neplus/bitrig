@@ -230,11 +230,6 @@ bad1:
 	return (error);
 }
 
-struct kmem_va_mode kv_exec = {
-	.kv_map = &exec_map,
-	.kv_wait = 1
-};
-
 /*
  * exec system call
  */

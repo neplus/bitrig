@@ -308,7 +308,7 @@ ELFNAME(load_file)(struct proc *p, char *path, struct exec_package *epp,
 	struct nameidata nd;
 	Elf_Ehdr eh;
 	Elf_Phdr *ph = NULL;
-	u_long phsize;
+	u_long phsize = 0;
 	Elf_Addr addr = 0;
 	struct vnode *vp;
 	Elf_Phdr *base_ph = NULL;
@@ -956,7 +956,7 @@ ELFNAMEEND(coredump)(struct proc *p, void *cookie)
 	struct countsegs_state cs;
 	struct writesegs_state ws;
 	off_t notestart, secstart, offset;
-	size_t notesize, psectionslen;
+	size_t notesize, psectionslen = 0;
 	int error, i;
 
 	/*
